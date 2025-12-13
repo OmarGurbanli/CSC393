@@ -1,5 +1,8 @@
-package com.rentacar;
+package com.rentacar.service;
 
+import com.rentacar.model.Member;
+import com.rentacar.model.ReservationStatus;
+import com.rentacar.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

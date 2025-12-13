@@ -1,5 +1,10 @@
 package com.rentacar;
 
+import com.rentacar.model.Car;
+import com.rentacar.model.Location;
+import com.rentacar.repository.CarRepository;
+import com.rentacar.repository.LocationRepository;
+import com.rentacar.service.CarService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

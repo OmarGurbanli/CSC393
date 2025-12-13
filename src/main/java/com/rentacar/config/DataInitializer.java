@@ -1,5 +1,7 @@
-package com.rentacar;
+package com.rentacar.config;
 
+import com.rentacar.model.*;
+import com.rentacar.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;

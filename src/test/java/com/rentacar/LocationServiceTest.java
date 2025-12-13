@@ -1,5 +1,8 @@
 package com.rentacar;
 
+import com.rentacar.model.Location;
+import com.rentacar.repository.LocationRepository;
+import com.rentacar.service.LocationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;

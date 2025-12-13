@@ -1,5 +1,8 @@
 package com.rentacar;
 
+import com.rentacar.model.Member;
+import com.rentacar.repository.MemberRepository;
+import com.rentacar.service.MemberService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;

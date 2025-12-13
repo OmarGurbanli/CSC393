@@ -1,5 +1,7 @@
-package com.rentacar;
+package com.rentacar.repository;
 
+import com.rentacar.model.Reservation;
+import com.rentacar.model.ReservationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

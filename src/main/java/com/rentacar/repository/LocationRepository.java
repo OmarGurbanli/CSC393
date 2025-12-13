@@ -1,5 +1,6 @@
-package com.rentacar;
+package com.rentacar.repository;
 
+import com.rentacar.model.Location;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
