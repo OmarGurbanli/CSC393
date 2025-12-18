@@ -1,5 +1,7 @@
 package com.rentacar.service;
 
+import com.rentacar.dto.ReservationRequestDTO;
+import com.rentacar.dto.ReservationResponseDTO;
 import com.rentacar.model.*;
 import com.rentacar.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -169,5 +172,100 @@ public class ReservationService {
     public Double calculateTotalPrice(String reservationNumber) {
         Reservation reservation = getReservationByNumber(reservationNumber);
         return reservation.calculateTotalPrice();
+    }
+
+    // DTO-based methods for REST API
+    public ReservationResponseDTO makeReservation(ReservationRequestDTO request) {
+        // Find car by barcode
+        Car car = carRepository.findByBarcode(request.getCarBarcode())
+                .orElseThrow(() -> new RuntimeException("Car not found with barcode: " + request.getCarBarcode()));
+
+        // Check car status
+        if (!"AVAILABLE".equals(car.getStatus())) {
+            return null; // Return null to indicate car is not available (406 status)
+        }
+
+        // Check for date conflicts
+        boolean hasConflict = reservationRepository.existsActiveReservationForCar(
+                car.getId(), request.getPickupDateTime(), request.getDropoffDateTime());
+        if (hasConflict) {
+            return null; // Car is already reserved for these dates
+        }
+
+        // Find member
+        Member member = memberRepository.findById(request.getMemberId())
+                .orElseThrow(() -> new RuntimeException("Member not found"));
+
+        // Find locations
+        Location pickupLocation = locationRepository.findByCode(request.getPickupLocationCode())
+                .orElseThrow(() -> new RuntimeException("Pickup location not found"));
+        Location dropoffLocation = locationRepository.findByCode(request.getDropoffLocationCode())
+                .orElseThrow(() -> new RuntimeException("Dropoff location not found"));
+
+        // Create reservation
+        Reservation reservation = new Reservation();
+        reservation.setReservationNumber(generateReservationNumber());
+        reservation.setCar(car);
+        reservation.setMember(member);
+        reservation.setPickupLocation(pickupLocation);
+        reservation.setDropoffLocation(dropoffLocation);
+        reservation.setPickupDate(request.getPickupDateTime());
+        reservation.setDropoffDate(request.getDropoffDateTime());
+        reservation.setStatus(ReservationStatus.ACTIVE);
+        reservation.setCreationDate(LocalDateTime.now());
+
+        // Add extras if provided
+        if (request.getExtraCodes() != null && !request.getExtraCodes().isEmpty()) {
+            List<Extra> extras = new ArrayList<>();
+            for (String extraCode : request.getExtraCodes()) {
+                Extra extra = extraRepository.findByName(extraCode)
+                        .orElseThrow(() -> new RuntimeException("Extra not found: " + extraCode));
+                extras.add(extra);
+            }
+            reservation.setExtras(extras);
+        }
+
+        // Update car status - but wait, the requirement says to check status, not change it
+        // Actually, we should not change car status to RESERVED, we just check it's AVAILABLE
+        // The car remains AVAILABLE until pickup date
+
+        reservation = reservationRepository.save(reservation);
+
+        // Convert to DTO
+        ReservationResponseDTO response = new ReservationResponseDTO();
+        response.setReservationNumber(reservation.getReservationNumber());
+        response.setPickupDateTime(reservation.getPickupDate());
+        response.setDropoffDateTime(reservation.getDropoffDate());
+        response.setPickupLocationCode(reservation.getPickupLocation().getCode());
+        response.setPickupLocationName(reservation.getPickupLocation().getName());
+        response.setDropoffLocationCode(reservation.getDropoffLocation().getCode());
+        response.setDropoffLocationName(reservation.getDropoffLocation().getName());
+        response.setTotalAmount(reservation.calculateTotalPrice());
+        response.setMemberId(reservation.getMember().getId());
+        response.setMemberName(reservation.getMember().getName());
+
+        return response;
+    }
+
+    public boolean addExtra(String reservationNumber, String extraCode) {
+        try {
+            Reservation reservation = getReservationByNumber(reservationNumber);
+            Extra extra = extraRepository.findByName(extraCode)
+                    .orElse(null);
+
+            if (extra == null) {
+                return false; // Extra not found
+            }
+
+            if (reservation.getExtras().contains(extra)) {
+                return false; // Extra already added
+            }
+
+            reservation.getExtras().add(extra);
+            reservationRepository.save(reservation);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

@@ -1,6 +1,11 @@
 package com.rentacar.service;
 
+import com.rentacar.dto.CarResponseDTO;
+import com.rentacar.dto.CarSearchRequestDTO;
+import com.rentacar.dto.RentedCarDTO;
 import com.rentacar.model.Car;
+import com.rentacar.model.Reservation;
+import com.rentacar.model.ReservationStatus;
 import com.rentacar.repository.CarRepository;
 import com.rentacar.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -116,5 +122,85 @@ public class CarService {
 
         boolean hasConflict = reservationRepository.existsActiveReservationForCar(carId, pickup, dropoff);
         return !hasConflict;
+    }
+
+    // DTO-based methods for REST API
+    public List<CarResponseDTO> searchAvailableCars(CarSearchRequestDTO request) {
+        List<Car> cars = carRepository.findAvailableCars(
+                request.getPickupDate(),
+                request.getDropoffDate(),
+                request.getPickupLocationCode(),
+                request.getCategory(),
+                request.getTransmissionType(),
+                request.getNumberOfSeats(),
+                request.getMinDailyPrice(),
+                request.getMaxDailyPrice()
+        );
+
+        return cars.stream().map(car -> {
+            CarResponseDTO dto = new CarResponseDTO();
+            dto.setBarcode(car.getBarcode());
+            dto.setBrand(car.getBrand());
+            dto.setModel(car.getModel());
+            dto.setCategory(car.getCategory());
+            dto.setTransmissionType(car.getTransmissionType());
+            dto.setDailyPrice(car.getDailyPrice());
+            dto.setNumberOfSeats(car.getNumberOfSeats());
+            if (car.getLocation() != null) {
+                dto.setLocationName(car.getLocation().getName());
+            }
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    public List<RentedCarDTO> getAllRentedCars() {
+        List<Car> rentedCars = carRepository.findCurrentlyRentedCars();
+
+        return rentedCars.stream().map(car -> {
+            // Find the active reservation for this car
+            Reservation activeReservation = reservationRepository.findByCarId(car.getId()).stream()
+                    .filter(r -> r.getStatus() == ReservationStatus.ACTIVE &&
+                            LocalDateTime.now().isAfter(r.getPickupDate()) &&
+                            LocalDateTime.now().isBefore(r.getDropoffDate()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (activeReservation == null) {
+                return null;
+            }
+
+            RentedCarDTO dto = new RentedCarDTO();
+            dto.setBrand(car.getBrand());
+            dto.setModel(car.getModel());
+            dto.setCarType(car.getCategory());
+            dto.setTransmissionType(car.getTransmissionType());
+            dto.setBarcode(car.getBarcode());
+            dto.setReservationNumber(activeReservation.getReservationNumber());
+            dto.setMemberName(activeReservation.getMember().getName());
+            dto.setDropoffDateTime(activeReservation.getDropoffDate());
+            if (activeReservation.getDropoffLocation() != null) {
+                dto.setDropoffLocation(activeReservation.getDropoffLocation().getName());
+            }
+            dto.setReservationDayCount(activeReservation.getDayCount());
+            return dto;
+        }).filter(dto -> dto != null).collect(Collectors.toList());
+    }
+
+    public boolean deleteCar(String barcode) {
+        Car car = carRepository.findByBarcode(barcode)
+                .orElse(null);
+
+        if (car == null) {
+            throw new RuntimeException("Car not found with barcode: " + barcode);
+        }
+
+        long reservationCount = reservationRepository.countByCarId(car.getId());
+
+        if (reservationCount > 0) {
+            return false; // Car has been used in reservations
+        }
+
+        carRepository.delete(car);
+        return true;
     }
 }

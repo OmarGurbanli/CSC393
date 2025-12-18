@@ -7,8 +7,10 @@ public class ReservationResponseDTO {
     private String reservationNumber;
     private LocalDateTime pickupDateTime;
     private LocalDateTime dropoffDateTime;
-    private String pickupLocation;
-    private String dropoffLocation;
+    private String pickupLocationCode;
+    private String pickupLocationName;
+    private String dropoffLocationCode;
+    private String dropoffLocationName;
     private Double totalAmount;
     private Long memberId;
     private String memberName;
@@ -37,20 +39,36 @@ public class ReservationResponseDTO {
         this.dropoffDateTime = dropoffDateTime;
     }
 
-    public String getPickupLocation() {
-        return pickupLocation;
+    public String getPickupLocationCode() {
+        return pickupLocationCode;
     }
 
-    public void setPickupLocation(String pickupLocation) {
-        this.pickupLocation = pickupLocation;
+    public void setPickupLocationCode(String pickupLocationCode) {
+        this.pickupLocationCode = pickupLocationCode;
     }
 
-    public String getDropoffLocation() {
-        return dropoffLocation;
+    public String getPickupLocationName() {
+        return pickupLocationName;
     }
 
-    public void setDropoffLocation(String dropoffLocation) {
-        this.dropoffLocation = dropoffLocation;
+    public void setPickupLocationName(String pickupLocationName) {
+        this.pickupLocationName = pickupLocationName;
+    }
+
+    public String getDropoffLocationCode() {
+        return dropoffLocationCode;
+    }
+
+    public void setDropoffLocationCode(String dropoffLocationCode) {
+        this.dropoffLocationCode = dropoffLocationCode;
+    }
+
+    public String getDropoffLocationName() {
+        return dropoffLocationName;
+    }
+
+    public void setDropoffLocationName(String dropoffLocationName) {
+        this.dropoffLocationName = dropoffLocationName;
     }
 
     public Double getTotalAmount() {

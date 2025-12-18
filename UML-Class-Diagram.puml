@@ -1,0 +1,82 @@
+@startuml Car Rental System Class Diagram
+
+class Member {
+  - Long id
+  - String name
+  - String address
+  - String email
+  - String phone
+  - String drivingLicenseNumber
+}
+
+class Reservation {
+  - Long id
+  - String reservationNumber
+  - LocalDateTime creationDate
+  - LocalDateTime pickupDate
+  - LocalDateTime dropoffDate
+  - LocalDateTime returnDate
+  - String status
+  - Member member
+  - Car car
+  - Location pickupLocation
+  - Location dropoffLocation
+  - List<Extra> extras
+  + getDayCount() : long
+  + calculateTotalPrice() : Double
+}
+
+class Car {
+  - Long id
+  - String barcode
+  - String licensePlate
+  - String brand
+  - String model
+  - Integer numberOfSeats
+  - Double mileage
+  - String transmissionType
+  - Double dailyPrice
+  - String category
+  - String status
+  - Location location
+}
+
+class Location {
+  - Long id
+  - String code
+  - String name
+}
+
+class Extra {
+  - Long id
+  - String name
+  - Double price
+}
+
+' Relationships
+Member "1" --> "*" Reservation : makes
+Reservation "*" --> "1" Car : for
+Reservation "*" --> "*" Extra : includes
+Reservation "*" --> "1" Location : pickupLocation
+Reservation "*" --> "1" Location : dropoffLocation
+Car "*" --> "1" Location : located at
+
+note right of Car
+  Status can be:
+  - AVAILABLE
+  - BEING_SERVICED
+end note
+
+note right of Reservation
+  Reservation number is
+  auto-generated 8-digit
+  string
+  
+  Status values:
+  - ACTIVE
+  - COMPLETED
+  - CANCELLED
+end note
+
+@enduml
+
