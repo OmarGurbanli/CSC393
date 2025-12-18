@@ -124,7 +124,6 @@ public class CarService {
         return !hasConflict;
     }
 
-    // DTO-based methods for REST API
     public List<CarResponseDTO> searchAvailableCars(CarSearchRequestDTO request) {
         List<Car> cars = carRepository.findAvailableCars(
                 request.getPickupDate(),
@@ -197,7 +196,7 @@ public class CarService {
         long reservationCount = reservationRepository.countByCarId(car.getId());
 
         if (reservationCount > 0) {
-            return false; // Car has been used in reservations
+            return false;
         }
 
         carRepository.delete(car);

@@ -23,7 +23,6 @@ public class ReservationController {
         this.reservationService = reservationService;
     }
 
-    // 1️⃣ MAKE RESERVATION
     @PostMapping
     @Operation(
             summary = "Make a reservation",
@@ -45,7 +44,6 @@ public class ReservationController {
         return ResponseEntity.ok(response);
     }
 
-    // 2️⃣ RETURN CAR
     @PostMapping("/{reservationNumber}/return")
     @Operation(
             summary = "Return a car",
@@ -70,7 +68,6 @@ public class ReservationController {
         return ResponseEntity.ok("Car returned successfully");
     }
 
-    // 3️⃣ CANCEL RESERVATION
     @PostMapping("/{reservationNumber}/cancel")
     @Operation(
             summary = "Cancel a reservation",
@@ -95,7 +92,6 @@ public class ReservationController {
         return ResponseEntity.ok("Reservation cancelled successfully");
     }
 
-    // 4️⃣ ADD EXTRA TO RESERVATION
     @PostMapping("/{reservationNumber}/extras/{extraCode}")
     @Operation(
             summary = "Add extra to reservation",
@@ -122,7 +118,6 @@ public class ReservationController {
         return ResponseEntity.ok("Extra added successfully");
     }
 
-    // 5️⃣ DELETE RESERVATION
     @DeleteMapping("/{reservationNumber}")
     @Operation(
             summary = "Delete a reservation",

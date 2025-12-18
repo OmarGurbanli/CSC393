@@ -15,7 +15,6 @@ public class CarSearchRequestDTO {
 
     private String pickupLocationCode;
 
-    // getters & setters
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
 

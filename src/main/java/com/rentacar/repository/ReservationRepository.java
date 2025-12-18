@@ -14,7 +14,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     Optional<Reservation> findByReservationNumber(String reservationNumber);
     List<Reservation> findByStatus(ReservationStatus status);
 
-    // Добавляем недостающие методы
     long countByCarId(Long carId);
 
     @Query("SELECT r FROM Reservation r WHERE r.status = 'ACTIVE' AND " +
@@ -28,7 +27,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
                                           @Param("pickupDate") LocalDateTime pickupDate,
                                           @Param("dropoffDate") LocalDateTime dropoffDate);
 
-    // Дополнительные методы
     List<Reservation> findByCarId(Long carId);
     List<Reservation> findByMemberId(Long memberId);
     List<Reservation> findByPickupLocationCode(String locationCode);

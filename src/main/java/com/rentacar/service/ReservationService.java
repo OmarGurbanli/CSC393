@@ -182,14 +182,14 @@ public class ReservationService {
 
         // Check car status
         if (!"AVAILABLE".equals(car.getStatus())) {
-            return null; // Return null to indicate car is not available (406 status)
+            return null;
         }
 
         // Check for date conflicts
         boolean hasConflict = reservationRepository.existsActiveReservationForCar(
                 car.getId(), request.getPickupDateTime(), request.getDropoffDateTime());
         if (hasConflict) {
-            return null; // Car is already reserved for these dates
+            return null;
         }
 
         // Find member
@@ -225,10 +225,6 @@ public class ReservationService {
             reservation.setExtras(extras);
         }
 
-        // Update car status - but wait, the requirement says to check status, not change it
-        // Actually, we should not change car status to RESERVED, we just check it's AVAILABLE
-        // The car remains AVAILABLE until pickup date
-
         reservation = reservationRepository.save(reservation);
 
         // Convert to DTO
@@ -254,11 +250,11 @@ public class ReservationService {
                     .orElse(null);
 
             if (extra == null) {
-                return false; // Extra not found
+                return false;
             }
 
             if (reservation.getExtras().contains(extra)) {
-                return false; // Extra already added
+                return false;
             }
 
             reservation.getExtras().add(extra);

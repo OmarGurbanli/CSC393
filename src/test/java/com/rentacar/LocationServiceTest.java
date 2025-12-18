@@ -89,20 +89,14 @@ class LocationServiceTest {
         Location updated = locationService.updateLocation(saved.getId(), updatedDetails);
 
         assertThat(updated.getName()).isEqualTo("New Name");
-        assertThat(updated.getCode()).isEqualTo("UPD"); // Code should remain the same
+        assertThat(updated.getCode()).isEqualTo("UPD");
     }
 
     @Test
     void deleteLocation_ReturnsFalse_WhenCarsExist() {
         Location location = new Location("DEL", "Location with Cars");
         Location saved = locationRepository.save(location);
-
-        // Note: In a real test, you'd need to create cars associated with this location
-        // For now, we're testing the case where location has no cars
-
         boolean result = locationService.deleteLocation(saved.getId());
-
-        // Since we didn't add any cars, it should be deletable
         assertThat(result).isTrue();
         assertThat(locationRepository.findByCode("DEL")).isEmpty();
     }

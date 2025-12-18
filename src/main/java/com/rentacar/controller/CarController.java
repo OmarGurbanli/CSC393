@@ -26,7 +26,6 @@ public class CarController {
         this.carService = carService;
     }
 
-    // 1️⃣ SEARCH AVAILABLE CARS
     @PostMapping("/search")
     @Operation(
             summary = "Search available cars",
@@ -48,7 +47,6 @@ public class CarController {
         return ResponseEntity.ok(cars);
     }
 
-    // 2️⃣ GET ALL RENTED CARS
     @GetMapping("/rented")
     @Operation(
             summary = "Get all rented cars",
@@ -69,7 +67,6 @@ public class CarController {
         return ResponseEntity.ok(rentedCars);
     }
 
-    // 3️⃣ DELETE CAR
     @DeleteMapping("/{barcode}")
     @Operation(
             summary = "Delete a car",
