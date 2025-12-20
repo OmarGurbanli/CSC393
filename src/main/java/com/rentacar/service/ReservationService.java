@@ -17,11 +17,16 @@ import java.util.Random;
 @RequiredArgsConstructor
 @Transactional
 public class ReservationService {
+
     private final ReservationRepository reservationRepository;
     private final CarRepository carRepository;
     private final MemberRepository memberRepository;
     private final LocationRepository locationRepository;
     private final ExtraRepository extraRepository;
+
+    // -------------------------
+    // BASIC RESERVATION METHODS
+    // -------------------------
 
     public List<Reservation> getAllReservations() {
         return reservationRepository.findAll();
@@ -29,21 +34,31 @@ public class ReservationService {
 
     public Reservation getReservationById(Long id) {
         return reservationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Reservation not found with id: " + id));
+                .orElseThrow(() ->
+                        new RuntimeException("Reservation not found with id: " + id));
     }
 
     public Reservation getReservationByNumber(String reservationNumber) {
         return reservationRepository.findByReservationNumber(reservationNumber)
-                .orElseThrow(() -> new RuntimeException("Reservation not found with number: " + reservationNumber));
+                .orElseThrow(() ->
+                        new RuntimeException("Reservation not found with number: " + reservationNumber));
     }
 
     public List<Reservation> getReservationsByStatus(ReservationStatus status) {
         return reservationRepository.findByStatus(status);
     }
 
-    public Reservation makeReservation(Long carId, Long memberId, String pickupLocationCode,
-                                       String dropoffLocationCode, LocalDateTime pickupDate,
-                                       LocalDateTime dropoffDate, List<Long> extraIds) {
+    // -------------------------
+    // RESERVATION CREATION (ENTITY BASED)
+    // -------------------------
+
+    public Reservation makeReservation(Long carId, Long memberId,
+                                       String pickupLocationCode,
+                                       String dropoffLocationCode,
+                                       LocalDateTime pickupDate,
+                                       LocalDateTime dropoffDate,
+                                       List<Long> extraIds) {
+
         Car car = carRepository.findById(carId)
                 .orElseThrow(() -> new RuntimeException("Car not found"));
 
@@ -51,15 +66,19 @@ public class ReservationService {
             throw new RuntimeException("Car is not available for reservation");
         }
 
-        boolean hasConflict = reservationRepository.existsActiveReservationForCar(carId, pickupDate, dropoffDate);
+        boolean hasConflict =
+                reservationRepository.existsActiveReservationForCar(carId, pickupDate, dropoffDate);
+
         if (hasConflict) {
             throw new RuntimeException("Car is already reserved for the selected dates");
         }
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new RuntimeException("Member not found"));
+
         Location pickupLocation = locationRepository.findByCode(pickupLocationCode)
                 .orElseThrow(() -> new RuntimeException("Pickup location not found"));
+
         Location dropoffLocation = locationRepository.findByCode(dropoffLocationCode)
                 .orElseThrow(() -> new RuntimeException("Dropoff location not found"));
 
@@ -72,8 +91,8 @@ public class ReservationService {
         reservation.setPickupDate(pickupDate);
         reservation.setDropoffDate(dropoffDate);
         reservation.setStatus(ReservationStatus.ACTIVE);
+        reservation.setCreationDate(LocalDateTime.now());
 
-        // Добавление дополнительных услуг
         if (extraIds != null && !extraIds.isEmpty()) {
             List<Extra> extras = extraRepository.findAllById(extraIds);
             reservation.setExtras(extras);
@@ -84,6 +103,10 @@ public class ReservationService {
 
         return reservationRepository.save(reservation);
     }
+
+    // -------------------------
+    // EXTRA OPERATIONS
+    // -------------------------
 
     public boolean addExtraToReservation(String reservationNumber, Long extraId) {
         Reservation reservation = getReservationByNumber(reservationNumber);
@@ -98,6 +121,26 @@ public class ReservationService {
         reservationRepository.save(reservation);
         return true;
     }
+
+    // Used by REST controller (extraCode based)
+    public boolean addExtra(String reservationNumber, String extraCode) {
+
+        Reservation reservation = getReservationByNumber(reservationNumber);
+        Extra extra = extraRepository.findByName(extraCode)
+                .orElse(null);
+
+        if (extra == null || reservation.getExtras().contains(extra)) {
+            return false;
+        }
+
+        reservation.getExtras().add(extra);
+        reservationRepository.save(reservation);
+        return true;
+    }
+
+    // -------------------------
+    // RESERVATION STATE CHANGES
+    // -------------------------
 
     public boolean cancelReservation(String reservationNumber) {
         Reservation reservation = getReservationByNumber(reservationNumber);
@@ -152,6 +195,10 @@ public class ReservationService {
         return true;
     }
 
+    // -------------------------
+    // QUERY / HELPER METHODS
+    // -------------------------
+
     public List<Reservation> getCurrentlyActiveReservations() {
         return reservationRepository.findCurrentlyActiveReservations();
     }
@@ -160,49 +207,45 @@ public class ReservationService {
         return carRepository.findCurrentlyRentedCars();
     }
 
-    private String generateReservationNumber() {
-        Random random = new Random();
-        String number;
-        do {
-            number = String.format("%08d", random.nextInt(100000000));
-        } while (reservationRepository.findByReservationNumber(number).isPresent());
-        return number;
-    }
-
     public Double calculateTotalPrice(String reservationNumber) {
         Reservation reservation = getReservationByNumber(reservationNumber);
         return reservation.calculateTotalPrice();
     }
 
-    // DTO-based methods for REST API
-    public ReservationResponseDTO makeReservation(ReservationRequestDTO request) {
-        // Find car by barcode
-        Car car = carRepository.findByBarcode(request.getCarBarcode())
-                .orElseThrow(() -> new RuntimeException("Car not found with barcode: " + request.getCarBarcode()));
+    // -------------------------
+    // DTO BASED METHOD (USED BY CONTROLLER)
+    // -------------------------
 
-        // Check car status
+    public ReservationResponseDTO makeReservation(ReservationRequestDTO request) {
+
+        Car car = carRepository.findByBarcode(request.getCarBarcode())
+                .orElseThrow(() ->
+                        new RuntimeException("Car not found with barcode: " + request.getCarBarcode()));
+
         if (!"AVAILABLE".equals(car.getStatus())) {
             return null;
         }
 
-        // Check for date conflicts
-        boolean hasConflict = reservationRepository.existsActiveReservationForCar(
-                car.getId(), request.getPickupDateTime(), request.getDropoffDateTime());
+        boolean hasConflict =
+                reservationRepository.existsActiveReservationForCar(
+                        car.getId(),
+                        request.getPickupDateTime(),
+                        request.getDropoffDateTime()
+                );
+
         if (hasConflict) {
             return null;
         }
 
-        // Find member
         Member member = memberRepository.findById(request.getMemberId())
                 .orElseThrow(() -> new RuntimeException("Member not found"));
 
-        // Find locations
         Location pickupLocation = locationRepository.findByCode(request.getPickupLocationCode())
                 .orElseThrow(() -> new RuntimeException("Pickup location not found"));
+
         Location dropoffLocation = locationRepository.findByCode(request.getDropoffLocationCode())
                 .orElseThrow(() -> new RuntimeException("Dropoff location not found"));
 
-        // Create reservation
         Reservation reservation = new Reservation();
         reservation.setReservationNumber(generateReservationNumber());
         reservation.setCar(car);
@@ -214,20 +257,19 @@ public class ReservationService {
         reservation.setStatus(ReservationStatus.ACTIVE);
         reservation.setCreationDate(LocalDateTime.now());
 
-        // Add extras if provided
         if (request.getExtraCodes() != null && !request.getExtraCodes().isEmpty()) {
             List<Extra> extras = new ArrayList<>();
             for (String extraCode : request.getExtraCodes()) {
                 Extra extra = extraRepository.findByName(extraCode)
-                        .orElseThrow(() -> new RuntimeException("Extra not found: " + extraCode));
+                        .orElseThrow(() ->
+                                new RuntimeException("Extra not found: " + extraCode));
                 extras.add(extra);
             }
             reservation.setExtras(extras);
         }
 
-        reservation = reservationRepository.save(reservation);
+        reservationRepository.save(reservation);
 
-        // Convert to DTO
         ReservationResponseDTO response = new ReservationResponseDTO();
         response.setReservationNumber(reservation.getReservationNumber());
         response.setPickupDateTime(reservation.getPickupDate());
@@ -243,25 +285,16 @@ public class ReservationService {
         return response;
     }
 
-    public boolean addExtra(String reservationNumber, String extraCode) {
-        try {
-            Reservation reservation = getReservationByNumber(reservationNumber);
-            Extra extra = extraRepository.findByName(extraCode)
-                    .orElse(null);
+    // -------------------------
+    // INTERNAL UTILITY
+    // -------------------------
 
-            if (extra == null) {
-                return false;
-            }
-
-            if (reservation.getExtras().contains(extra)) {
-                return false;
-            }
-
-            reservation.getExtras().add(extra);
-            reservationRepository.save(reservation);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+    private String generateReservationNumber() {
+        Random random = new Random();
+        String number;
+        do {
+            number = String.format("%08d", random.nextInt(100000000));
+        } while (reservationRepository.findByReservationNumber(number).isPresent());
+        return number;
     }
 }

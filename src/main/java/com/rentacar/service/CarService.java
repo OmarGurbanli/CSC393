@@ -20,8 +20,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class CarService {
+
     private final CarRepository carRepository;
     private final ReservationRepository reservationRepository;
+
+    // -------------------------
+    // BASIC CAR OPERATIONS
+    // -------------------------
+
     public List<Car> getAllCars() {
         return carRepository.findAll();
     }
@@ -56,75 +62,33 @@ public class CarService {
         return carRepository.save(car);
     }
 
+    // -------------------------
+    // SEARCH AVAILABLE CARS (OLD VERSION)
+    // -------------------------
+
     public List<Car> searchAvailableCars(LocalDateTime pickupDate, LocalDateTime dropoffDate,
                                          String category, String transmissionType,
                                          Double minPrice, Double maxPrice,
                                          Integer seats, String pickupLocationCode) {
-        return carRepository.findAvailableCars(pickupDate, dropoffDate, pickupLocationCode,
-                category, transmissionType, seats, minPrice, maxPrice);
+
+        return carRepository.findAvailableCars(
+                pickupDate,
+                dropoffDate,
+                pickupLocationCode,
+                category,
+                transmissionType,
+                seats,
+                minPrice,
+                maxPrice
+        );
     }
 
-    public boolean deleteCar(Long id) {
-        Car car = getCarById(id);
-        long reservationCount = reservationRepository.countByCarId(id);
-
-        if (reservationCount > 0) {
-            return false;
-        }
-
-        carRepository.delete(car);
-        return true;
-    }
-
-    public List<Car> getAvailableCars() {
-        return carRepository.findByStatus("AVAILABLE");
-    }
-
-    public List<Car> getCarsByLocation(String locationCode) {
-        return carRepository.findByLocationCode(locationCode);
-    }
-
-    public List<Car> getCarsByCategory(String category) {
-        return carRepository.findByCategory(category);
-    }
-
-    public Car updateCarStatus(Long id, String status) {
-        Car car = getCarById(id);
-        car.setStatus(status);
-        return carRepository.save(car);
-    }
-
-    public List<Car> getCurrentlyRentedCars() {
-        return carRepository.findCurrentlyRentedCars();
-    }
-
-    public List<Car> getCarsByTransmissionType(String transmissionType) {
-        return carRepository.findByTransmissionType(transmissionType);
-    }
-
-    public List<Car> getCarsByBrand(String brand) {
-        return carRepository.findByBrand(brand);
-    }
-
-    public List<Car> getCarsBySeats(Integer minSeats) {
-        return carRepository.findByNumberOfSeatsGreaterThanEqual(minSeats);
-    }
-
-    public List<Car> getCarsByPriceRange(Double minPrice, Double maxPrice) {
-        return carRepository.findByDailyPriceBetween(minPrice, maxPrice);
-    }
-
-    public boolean isCarAvailableForDates(Long carId, LocalDateTime pickup, LocalDateTime dropoff) {
-        Car car = getCarById(carId);
-        if (!"AVAILABLE".equals(car.getStatus())) {
-            return false;
-        }
-
-        boolean hasConflict = reservationRepository.existsActiveReservationForCar(carId, pickup, dropoff);
-        return !hasConflict;
-    }
+    // -------------------------
+    // SEARCH AVAILABLE CARS (DTO VERSION - USED BY CONTROLLER)
+    // -------------------------
 
     public List<CarResponseDTO> searchAvailableCars(CarSearchRequestDTO request) {
+
         List<Car> cars = carRepository.findAvailableCars(
                 request.getPickupDate(),
                 request.getDropoffDate(),
@@ -145,18 +109,97 @@ public class CarService {
             dto.setTransmissionType(car.getTransmissionType());
             dto.setDailyPrice(car.getDailyPrice());
             dto.setNumberOfSeats(car.getNumberOfSeats());
+
             if (car.getLocation() != null) {
                 dto.setLocationName(car.getLocation().getName());
             }
+
             return dto;
         }).collect(Collectors.toList());
     }
 
+    // -------------------------
+    // DELETE CAR
+    // -------------------------
+
+    public boolean deleteCar(Long id) {
+        Car car = getCarById(id);
+
+        long reservationCount = reservationRepository.countByCarId(id);
+        if (reservationCount > 0) {
+            return false;
+        }
+
+        carRepository.delete(car);
+        return true;
+    }
+
+    public boolean deleteCar(String barcode) {
+        Car car = carRepository.findByBarcode(barcode)
+                .orElseThrow(() ->
+                        new RuntimeException("Car not found with barcode: " + barcode));
+
+        long reservationCount = reservationRepository.countByCarId(car.getId());
+        if (reservationCount > 0) {
+            return false;
+        }
+
+        carRepository.delete(car);
+        return true;
+    }
+
+    // -------------------------
+    // ADDITIONAL FILTER METHODS (BONUS)
+    // -------------------------
+
+    public List<Car> getAvailableCars() {
+        return carRepository.findByStatus("AVAILABLE");
+    }
+
+    public List<Car> getCarsByLocation(String locationCode) {
+        return carRepository.findByLocationCode(locationCode);
+    }
+
+    public List<Car> getCarsByCategory(String category) {
+        return carRepository.findByCategory(category);
+    }
+
+    public List<Car> getCarsByTransmissionType(String transmissionType) {
+        return carRepository.findByTransmissionType(transmissionType);
+    }
+
+    public List<Car> getCarsByBrand(String brand) {
+        return carRepository.findByBrand(brand);
+    }
+
+    public List<Car> getCarsBySeats(Integer minSeats) {
+        return carRepository.findByNumberOfSeatsGreaterThanEqual(minSeats);
+    }
+
+    public List<Car> getCarsByPriceRange(Double minPrice, Double maxPrice) {
+        return carRepository.findByDailyPriceBetween(minPrice, maxPrice);
+    }
+
+    public Car updateCarStatus(Long id, String status) {
+        Car car = getCarById(id);
+        car.setStatus(status);
+        return carRepository.save(car);
+    }
+
+    // -------------------------
+    // RENTED CARS
+    // -------------------------
+
+    public List<Car> getCurrentlyRentedCars() {
+        return carRepository.findCurrentlyRentedCars();
+    }
+
     public List<RentedCarDTO> getAllRentedCars() {
+
         List<Car> rentedCars = carRepository.findCurrentlyRentedCars();
 
         return rentedCars.stream().map(car -> {
-            // Find the active reservation for this car
+
             Reservation activeReservation = reservationRepository.findByCarId(car.getId()).stream()
                     .filter(r -> r.getStatus() == ReservationStatus.ACTIVE &&
                             LocalDateTime.now().isAfter(r.getPickupDate()) &&
@@ -177,29 +220,31 @@ public class CarService {
             dto.setReservationNumber(activeReservation.getReservationNumber());
             dto.setMemberName(activeReservation.getMember().getName());
             dto.setDropoffDateTime(activeReservation.getDropoffDate());
+            dto.setReservationDayCount(activeReservation.getDayCount());
+
             if (activeReservation.getDropoffLocation() != null) {
                 dto.setDropoffLocation(activeReservation.getDropoffLocation().getName());
             }
-            dto.setReservationDayCount(activeReservation.getDayCount());
+
             return dto;
         }).filter(dto -> dto != null).collect(Collectors.toList());
     }
 
-    public boolean deleteCar(String barcode) {
-        Car car = carRepository.findByBarcode(barcode)
-                .orElse(null);
+    // -------------------------
+    // AVAILABILITY CHECK
+    // -------------------------
 
-        if (car == null) {
-            throw new RuntimeException("Car not found with barcode: " + barcode);
-        }
+    public boolean isCarAvailableForDates(Long carId, LocalDateTime pickup, LocalDateTime dropoff) {
 
-        long reservationCount = reservationRepository.countByCarId(car.getId());
+        Car car = getCarById(carId);
 
-        if (reservationCount > 0) {
+        if (!"AVAILABLE".equals(car.getStatus())) {
             return false;
         }
 
-        carRepository.delete(car);
-        return true;
+        boolean hasConflict =
+                reservationRepository.existsActiveReservationForCar(carId, pickup, dropoff);
+
+        return !hasConflict;
     }
 }
